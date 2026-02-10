@@ -20,9 +20,11 @@ EXCLUDED_COLUMNS = [
     "clearBookOnStart", 
     "clobRewards", 
     "clobTokenIds", 
+    "closedTime",
     "commentsEnabled", 
     "competitive", 
-    "conditionId", 
+    "conditionId",
+    "createdAt", 
     "createdBy", 
     "creator", 
     "customLiveness", 
@@ -31,6 +33,7 @@ EXCLUDED_COLUMNS = [
     "deploying", 
     "deployingTimestamp", 
     "disqusThread", 
+    "endDate",
     "endDateIso",
     "eventStartTime",
     "fee", 
@@ -74,7 +77,7 @@ EXCLUDED_COLUMNS = [
     "slug", 
     "sponsorImage", 
     "sportsMarketType", 
-    "startDateIso",
+    "startDate",
     "subcategory", 
     "submitted_by",
     "takerBaseFee",
@@ -135,7 +138,14 @@ STR_COLUMNS = [
     "resolvedBy"
 ]
 
-# This function is dedicated to validating that the CSV exists and can be read.
+TIME_COLUMNS = [
+    "endDate",
+    "startDate",
+    "startDateIso",
+    "umaEndDate"
+]
+
+# This function validates that the CSV exists and can be read.
 def load_data(file: str) -> pandas.DataFrame:
     if not file.exists():
         print(f"{file} does not exist.")
@@ -154,6 +164,56 @@ def load_data(file: str) -> pandas.DataFrame:
         print(f"{file} failed to be read by Pandas.")
         sys.exit(1)
     
+    return data
+
+# This function pre-processes the data.
+def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
+    # Drop redundant, irrelevant, and/or mostly blank feature columns.
+    data.drop(
+        columns=EXCLUDED_COLUMNS, 
+        axis=1, 
+        inplace=True
+    )
+
+    # Fill in null values for important feature columns.
+    data[BOOL_COLUMNS] = data[BOOL_COLUMNS].astype(bool).fillna(False)
+    data[FLOAT_COLUMNS] = data[FLOAT_COLUMNS].astype("float64").fillna(0.0)
+    data[STR_COLUMNS] = data[STR_COLUMNS].astype(str).fillna("")
+
+    # Filter for resolved market contracts that have boolean outcomes.
+    # Note that the Pandas dataframe stores lists as objects rather than as 
+    # Python lists, so we have to check against string types as a result.
+    mask_closed = data["umaResolutionStatus"] == "resolved"
+    mask_binary = data["outcomePrices"].astype(str).isin([
+        "[\"0\", \"1\"]", 
+        "[\"1\", \"0\"]"
+    ])
+
+    # Apply the filtering masks and drop any rows that still have null values.
+    data = data.loc[mask_closed & mask_binary].dropna()
+
+    # Convert dates to datetime objects and calculate a daysElapsed value.
+    data["endDate"] = pandas.to_datetime(
+        data["umaEndDate"], 
+        format="mixed",
+        utc=True
+    )
+
+    data["startDate"] = pandas.to_datetime(
+        data["startDateIso"],
+        format="mixed",
+        utc=True
+    )
+
+    data["daysElapsed"] = (data["endDate"] - data["startDate"]).dt.days
+
+    # Drop the time columns since they are no longer needed.
+    data.drop(
+        columns=TIME_COLUMNS, 
+        axis=1, 
+        inplace=True
+    )
+
     return data
 
 if __name__ == "__main__":
@@ -180,48 +240,15 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    # Load in the market dataset.
+    # Load in the market dataset and process it.
     data = load_data(args.data)
-
-    # Drop the columns we do not care for. These are removed because they have
-    # little relevance to the betting odds or have far too few values filled in.
-    data.drop(
-        columns=EXCLUDED_COLUMNS, 
-        axis=1, 
-        inplace=True
-    )
-
-    # These features need to have null values filled in with intuitive 
-    # substitute values. I generally interpret blanks here as false or zero.
-    for bool_column in BOOL_COLUMNS:
-        data[bool_column] = data[bool_column].astype(bool)
-        data[bool_column] = data[bool_column].fillna(False)
-    
-    for float_column in FLOAT_COLUMNS:
-        data[float_column] = data[float_column].astype("float64")
-        data[float_column] = data[float_column].fillna(0.0)
-
-    for str_column in STR_COLUMNS:
-        data[str_column] = data[str_column].astype(str)
-        data[str_column] = data[str_column].fillna("")
-
-    # Filter for resolved market contracts that have boolean outcomes.
-    # Note that the Pandas dataframe stores lists as  objects rather than as 
-    # Python lists, so we have to check against string types as a result.
-    mask_closed = (data["umaResolutionStatus"] == "resolved")
-    mask_01 = (data["outcomePrices"].astype(str) == "[\"0\", \"1\"]")
-    mask_10 = (data["outcomePrices"].astype(str) == "[\"1\", \"0\"]")
-
-    filtered_data = data.loc[mask_closed & (mask_01 | mask_10)]
-
-    # Drop all rows that still contain null values.
-    filtered_data = filtered_data.dropna()
+    processed_data = preprocess_data(data)
 
     # Save the filtered data to a separate CSV in the current directory.
-    filtered_data.to_csv(
+    processed_data.to_csv(
         path_or_buf=args.output,
         index=False
     )
 
     # For debugging purposes, output info about the new filtered_data frame.
-    print(filtered_data.info())
+    print(processed_data.info())
