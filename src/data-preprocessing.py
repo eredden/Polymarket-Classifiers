@@ -3,6 +3,7 @@
 # Written by Evan Redden (ID: 012248650).
 
 from argparse import ArgumentParser
+import ast
 import pandas
 from pathlib import Path
 import sys
@@ -31,10 +32,14 @@ EXCLUDED_COLUMNS = [
     "cyom", 
     "denominationToken", 
     "deploying", 
-    "deployingTimestamp", 
+    "deployingTimestamp",
+    "description", 
     "disqusThread", 
     "endDate",
     "endDateIso",
+    "event_id",
+    "event_slug",
+    "event_title",
     "eventStartTime",
     "fee", 
     "feesEnabled", 
@@ -53,7 +58,6 @@ EXCLUDED_COLUMNS = [
     "image", 
     "lastTradePrice", 
     "lowerBound",
-    "line", 
     "mailchimpTag", 
     "makerBaseFee", 
     "manualActivation", 
@@ -65,9 +69,13 @@ EXCLUDED_COLUMNS = [
     "notificationsEnabled", 
     "pagerDutyNotificationEnabled", 
     "pendingDeployment", 
+    "question",
     "questionID", 
     "ready", 
     "readyForCron", 
+    "resolutionSource",
+    "resolvedBy",
+    "umaResolutionStatuses",
     "rfqEnabled", 
     "secondsDelay", 
     "sentDiscord", 
@@ -87,7 +95,10 @@ EXCLUDED_COLUMNS = [
     "twitterCardLastRefreshed",
     "twitterCardLastValidated",
     "twitterCardLocation",
+    "umaBond",
     "umaEndDateIso",
+    "umaReward",
+    "updatedAt",
     "updatedBy",
     "upperBound",
     "wideFormat"
@@ -113,8 +124,6 @@ FLOAT_COLUMNS = [
     "oneYearPriceChange",
     "orderMinSize",
     "orderPriceMinTickSize",
-    "umaBond",
-    "umaReward",
     "volume",
     "volume1mo",
     "volume1moAmm",
@@ -133,16 +142,14 @@ FLOAT_COLUMNS = [
     "volumeNum"
 ]
 
-STR_COLUMNS = [
-    "resolutionSource",
-    "resolvedBy"
-]
-
-TIME_COLUMNS = [
+CALC_COLUMNS = [
     "endDate",
+    "outcomes",
+    "outcomePrices",
     "startDate",
     "startDateIso",
-    "umaEndDate"
+    "umaEndDate",
+    "umaResolutionStatus"
 ]
 
 # This function validates that the CSV exists and can be read.
@@ -166,6 +173,13 @@ def load_data(file: str) -> pandas.DataFrame:
     
     return data
 
+# Determine the winning result by checking the prices of the outcomes.
+def determine_result(row):
+    try:
+        return row["outcomePrices"].index("1")
+    except (ValueError, IndexError):
+        return pandas.NA
+
 # This function pre-processes the data.
 def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
     # Drop redundant, irrelevant, and/or mostly blank feature columns.
@@ -178,9 +192,8 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
     # Fill in null values for important feature columns.
     data[BOOL_COLUMNS] = data[BOOL_COLUMNS].astype(bool).fillna(False)
     data[FLOAT_COLUMNS] = data[FLOAT_COLUMNS].astype("float64").fillna(0.0)
-    data[STR_COLUMNS] = data[STR_COLUMNS].astype(str).fillna("")
 
-    # Filter for resolved market contracts that have boolean outcomes.
+    # Filter for resolved market contracts that have over/under outcomes.
     # Note that the Pandas dataframe stores lists as objects rather than as 
     # Python lists, so we have to check against string types as a result.
     mask_closed = data["umaResolutionStatus"] == "resolved"
@@ -188,9 +201,18 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
         "[\"0\", \"1\"]", 
         "[\"1\", \"0\"]"
     ])
+    mask_over_under = data["outcomes"].astype(str) == "[\"Over\", \"Under\"]"
 
     # Apply the filtering masks and drop any rows that still have null values.
-    data = data.loc[mask_closed & mask_binary].dropna()
+    data = data.loc[mask_closed & mask_binary & mask_over_under].dropna()
+
+    # Convert the outcomes and outcome prices strings into lists.
+    data["outcomePrices"] = data["outcomePrices"].apply(ast.literal_eval)
+    data["outcomes"] = data["outcomes"].apply(ast.literal_eval)
+
+    # Generate under column to show whether the "Under" option won or not.
+    # This will be the target feature for our classification model.
+    data["under"] = data.apply(determine_result, axis=1)
 
     # Convert dates to datetime objects and calculate a daysElapsed value.
     data["endDate"] = pandas.to_datetime(
@@ -207,9 +229,9 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
 
     data["daysElapsed"] = (data["endDate"] - data["startDate"]).dt.days
 
-    # Drop the time columns since they are no longer needed.
+    # Drop the columns we used for calculations since they are no longer needed.
     data.drop(
-        columns=TIME_COLUMNS, 
+        columns=CALC_COLUMNS, 
         axis=1, 
         inplace=True
     )
