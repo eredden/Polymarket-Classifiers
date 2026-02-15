@@ -16,11 +16,14 @@ EXCLUDED_COLUMNS = [
     "archived", 
     "automaticallyActive", 
     "automaticallyResolved", 
+    "bestAsk",
+    "bestBid",
     "category", 
     "categoryMailchimpTag", 
     "clearBookOnStart", 
     "clobRewards", 
     "clobTokenIds", 
+    "closed",
     "closedTime",
     "commentsEnabled", 
     "competitive", 
@@ -35,12 +38,14 @@ EXCLUDED_COLUMNS = [
     "deployingTimestamp",
     "description", 
     "disqusThread", 
+    "enableOrderBook",
     "endDate",
     "endDateIso",
     "event_id",
     "event_slug",
     "event_title",
     "eventStartTime",
+    "featured",
     "fee", 
     "feesEnabled", 
     "formatType",
@@ -57,6 +62,10 @@ EXCLUDED_COLUMNS = [
     "id", 
     "image", 
     "lastTradePrice", 
+    "liquidity",
+    "liquidityAmm",
+    "liquidityClob",
+    "liquidityNum",
     "lowerBound",
     "mailchimpTag", 
     "makerBaseFee", 
@@ -64,9 +73,15 @@ EXCLUDED_COLUMNS = [
     "marketGroup", 
     "marketMakerAddress", 
     "marketType", 
+    "negRisk",
+    "negRiskOther",
     "negRiskMarketID", 
     "negRiskRequestID", 
+    "new",
     "notificationsEnabled", 
+    "oneMonthPriceChange",
+    "oneYearPriceChange",
+    "orderMinSize",
     "pagerDutyNotificationEnabled", 
     "pendingDeployment", 
     "question",
@@ -75,6 +90,7 @@ EXCLUDED_COLUMNS = [
     "readyForCron", 
     "resolutionSource",
     "resolvedBy",
+    "restricted",
     "umaResolutionStatuses",
     "rfqEnabled", 
     "secondsDelay", 
@@ -101,43 +117,28 @@ EXCLUDED_COLUMNS = [
     "updatedAt",
     "updatedBy",
     "upperBound",
+    "volume1moAmm",
+    "volume1moClob",
+    "volume1wkAmm",
+    "volume1yrAmm",
+    "volume24hrAmm",
+    "volumeAmm",
     "wideFormat"
 ]
 
-BOOL_COLUMNS = [
-    "enableOrderBook",
-    "featured",
-    "negRisk",
-    "new"
-]
-
 FLOAT_COLUMNS = [
-    "bestBid",
-    "liquidity",
-    "liquidityAmm",
-    "liquidityClob",
-    "liquidityNum",
     "oneDayPriceChange",
     "oneHourPriceChange",
-    "oneMonthPriceChange",
     "oneWeekPriceChange",
-    "oneYearPriceChange",
-    "orderMinSize",
     "orderPriceMinTickSize",
     "volume",
     "volume1mo",
-    "volume1moAmm",
-    "volume1moClob",
     "volume1wk",
-    "volume1wkAmm",
     "volume1wkClob",
     "volume1yr",
-    "volume1yrAmm",
     "volume1yrClob",
     "volume24hr",
-    "volume24hrAmm",
     "volume24hrClob",
-    "volumeAmm",
     "volumeClob",
     "volumeNum"
 ]
@@ -190,7 +191,6 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
     )
 
     # Fill in null values for important feature columns.
-    data[BOOL_COLUMNS] = data[BOOL_COLUMNS].astype(bool).fillna(False)
     data[FLOAT_COLUMNS] = data[FLOAT_COLUMNS].astype("float64").fillna(0.0)
 
     # Filter for resolved market contracts that have over/under outcomes.
