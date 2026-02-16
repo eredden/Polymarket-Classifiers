@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     # Instantiate the XGBoost classifier and a hyperparameter search space.
     # This is the search space that we will randomly search through to find the
-    # best hyperparameters for the XGBoost regressor.
+    # best hyperparameters for the XGBoost classifier.
     classifier = XGBClassifier(
         objective="binary:logistic",
         eval_metric="auc", # ROC-AUC score used for determining model effectiveness.
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         random_state=42 # A seed used for RNG, which ensures reproducibility.
     )
 
-    # Fit the regressor to the training data.
+    # Fit the classifier to the training data.
     model.fit(X_train, y_train)
 
     # Get the probability for the "1" class (e.g., over wins the bet).
