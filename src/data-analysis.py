@@ -132,13 +132,15 @@ if __name__ == "__main__":
         "volume"
     ]
 
+    cmap = plt.colormaps["rocket"]
+
     for feature in shap_dependence_features:
         shap.dependence_plot(
             feature, 
             shap_values, 
             X_test,
             show=False,
-            cmap="rocket"
+            cmap=cmap
         )
 
         plt.savefig(f"shapley-{feature}-dependence.png", transparent=False)
