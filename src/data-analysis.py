@@ -51,12 +51,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Splits data into features that we use for prediction (i.e. X) and the 
-    # target metric "under" (i.e. Y) for comparing predictions to actual
+    # target metric "over" (i.e. Y) for comparing predictions to actual
     # results.
     data = load_data(args.data)
 
-    y = data["under"]
-    X = data.drop(labels="under", axis=1)
+    y = data["over"]
+    X = data.drop(labels="over", axis=1)
 
     # Instantitates training and testing splits, which prevent overfitting by
     # using some of the data exclusively for training, and the rest exclusively
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     y_pred = model.predict(X_test)
 
     # Output the model evaluation metrics!
-    # R^2 is the variation of the dependent variable (e.g. under) 
+    # R^2 is the variation of the dependent variable (e.g. over) 
     # explained by the variation in the independent variables (i.e. features).
     # RMSE is the average of the differences between the predicted and actual 
     # values using the same units as the target variable.
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     print(f"R^2 as a percentage: {mse * 100}%")
     print(f"Root Mean Squared Error (RMSE): {rmse}")
 
-    # Generate a violin plot for line and the under. This code was ripped directly from: 
+    # Generate a violin plot for line and the over. This code was ripped directly from: 
     # https://www.geeksforgeeks.org/data-analysis/exploratory-data-analysis-in-python/
     plt.figure(figsize=(16, 8))
 
@@ -106,14 +106,14 @@ if __name__ == "__main__":
 
     seaborn.violinplot(
         x="line", 
-        y="under", 
+        y="over", 
         data=data,
         alpha=0.7
     )
 
-    plt.title("Violin Plot for Line and Under")
+    plt.title("Violin Plot for Line and Over")
     plt.xlabel("line")
-    plt.ylabel("under")
+    plt.ylabel("over")
     plt.savefig("line-violin-plot.png", transparent=False)
     plt.close()
 
@@ -148,26 +148,23 @@ if __name__ == "__main__":
     plt.savefig("shapley-values.png", transparent=False)
     plt.close()
 
-    # Generate a SHAP dependence plot for the line feature.
-    shap.dependence_plot(
-        "line", 
-        shap_values, 
-        X_test,
-        show=False,
-        cmap="rocket"
-    )
+    # Generate SHAP dependence graphs for these features.
+    shap_dependence_features = [
+        "line",
+        "oneDayPriceChange",
+        "oneHourPriceChange",
+        "spread",
+        "volume"
+    ]
 
-    plt.savefig("shapley-line-dependence.png", transparent=False)
-    plt.close()
+    for feature in shap_dependence_features:
+        shap.dependence_plot(
+            feature, 
+            shap_values, 
+            X_test,
+            show=False,
+            cmap="rocket"
+        )
 
-    # Generate a SHAP dependence plot for the oneDayPriceChange feature.
-    shap.dependence_plot(
-        "oneDayPriceChange", 
-        shap_values, 
-        X_test,
-        show=False,
-        cmap="rocket"
-    )
-
-    plt.savefig("shapley-oneDayPriceChange-dependence.png", transparent=False)
-    plt.close()
+        plt.savefig(f"shapley-{feature}-dependence.png", transparent=False)
+        plt.close()
