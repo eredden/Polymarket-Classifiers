@@ -22,6 +22,6 @@ python hyperparameter-optimization.py --data "..\data\binary_polymarket_markets.
 # Train the binary classification model and see the test results.
 python main.py --data "..\data\binary_polymarket_markets.csv"
 
-# Generate images showing the relationships between select features and the target feature "under."
+# Generate images showing the relationships between select features and the target feature "over."
 python data-analysis.py --data "..\data\binary_polymarket_markets.csv"
 ```

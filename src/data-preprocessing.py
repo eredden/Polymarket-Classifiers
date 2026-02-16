@@ -177,7 +177,7 @@ def load_data(file: str) -> pandas.DataFrame:
 # Determine the winning result by checking the prices of the outcomes.
 def determine_result(row):
     try:
-        return row["outcomePrices"].index("1")
+        return row["outcomePrices"].index("0")
     except (ValueError, IndexError):
         return pandas.NA
 
@@ -210,9 +210,9 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
     data["outcomePrices"] = data["outcomePrices"].apply(ast.literal_eval)
     data["outcomes"] = data["outcomes"].apply(ast.literal_eval)
 
-    # Generate under column to show whether the "Under" option won or not.
+    # Generate over column to show whether the "Over" option won or not.
     # This will be the target feature for our classification model.
-    data["under"] = data.apply(determine_result, axis=1)
+    data["over"] = data.apply(determine_result, axis=1)
 
     # Convert dates to datetime objects and calculate a daysElapsed value.
     data["endDate"] = pandas.to_datetime(

@@ -51,12 +51,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Splits data into features that we use for prediction (i.e. X) and the 
-    # target metric "under" (i.e. Y) for comparing predictions to actual
+    # target metric "over" (i.e. Y) for comparing predictions to actual
     # results.
     data = load_data(args.data)
 
-    y = data["under"]
-    X = data.drop(labels="under", axis=1)
+    y = data["over"]
+    X = data.drop(labels="over", axis=1)
 
     # Instantitates training and testing splits, which prevent overfitting by
     # using some of the data exclusively for training, and the rest exclusively
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     y_pred = model.predict(X_test)
 
     # Output the model evaluation metrics!
-    # R^2 is the variation of the dependent variable (e.g. under) 
+    # R^2 is the variation of the dependent variable (e.g. over) 
     # explained by the variation in the independent variables (i.e. features).
     # RMSE is the average of the differences between the predicted and actual 
     # values using the same units as the target variable.
