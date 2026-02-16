@@ -127,7 +127,9 @@ if __name__ == "__main__":
     # Generate SHAP dependence graphs for these features.
     shap_dependence_features = [
         "lastTradePrice",
-        "spread"
+        "spread",
+        "line",
+        "volume"
     ]
 
     for feature in shap_dependence_features:
