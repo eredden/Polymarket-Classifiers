@@ -5,13 +5,12 @@
 from argparse import ArgumentParser
 import pandas
 from pathlib import Path
-from sklearn.metrics import r2_score
-from sklearn.metrics import root_mean_squared_error
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import train_test_split
 from scipy.stats import randint
 import sys
-from xgboost import XGBRegressor
+from xgboost import XGBClassifier
 
 # This function validates that the CSV exists and can be read.
 def load_data(file: str) -> pandas.DataFrame:
@@ -68,45 +67,45 @@ if __name__ == "__main__":
         random_state=42 # A seed used for RNG, which ensures reproducibility.
     )
 
-    # Instantiate the XGBoost regressor and a hyperparameter search space.
+    # Instantiate the XGBoost classifier and a hyperparameter search space.
     # This is the search space that we will randomly search through to find the
     # best hyperparameters for the XGBoost regressor.
-    regressor = XGBRegressor(
-        objective="reg:squarederror",
+    classifier = XGBClassifier(
+        objective="binary:logistic",
+        eval_metric="auc", # ROC-AUC score used for determining model effectiveness.
         learning_rate=0.1 # The rate at which the gradient can be adjusted.
     )
 
+    # I initially began with n_estimators from 10 to 500 and max_depth from 
+    # 1 to 10. I whittled this down over time to find these optimal ranges.
     model_params = {
-        "n_estimators": randint(10, 150), # The number of sequential trees to build.
-        "max_depth": randint(8, 9) # The amount of layers in a given tree.
+        "n_estimators": randint(20, 40), # The number of sequential trees to build.
+        "max_depth": randint(7, 8) # The amount of layers in a given tree.
     }
 
     model = RandomizedSearchCV(
-        estimator=regressor,
+        estimator=classifier,
         param_distributions=model_params,
         n_iter=100, # The number of models to generate and test.
         cv=5, # The number of slices of data to supply to each individual model.
+        scoring="roc_auc", # What metric to use for scoring.
         random_state=42 # A seed used for RNG, which ensures reproducibility.
     )
 
     # Fit the regressor to the training data.
     model.fit(X_train, y_train)
 
-    # Make predictions on the test data.
-    y_pred = model.predict(X_test)
+    # Get the probability for the "1" class (e.g., over wins the bet).
+    y_probs = model.predict_proba(X_test)[:, 1]
+
+    # Calculate the AUC-ROC score. It is a good metric for determining 
+    # classification accuracy with a skewed dataset like ours where the ratio of 
+    # under to over bets is lopsided.
+    auc_score = roc_auc_score(y_test, y_probs)
 
     # Output the model evaluation metrics!
-    # R^2 is the variation of the dependent variable (e.g. over) 
-    # explained by the variation in the independent variables (i.e. features).
-    # RMSE is the average of the differences between the predicted and actual 
-    # values using the same units as the target variable.
-    mse = r2_score(y_test, y_pred)
-    rmse = root_mean_squared_error(y_test, y_pred)
-
     print("[MODEL EVALUATION METRICS]")
-    print(f"R^2: {mse}")
-    print(f"R^2 as a percentage: {mse * 100}%")
-    print(f"Root Mean Squared Error (RMSE): {rmse}")
+    print(f"AUC-ROC SCORE: {auc_score}")
 
     # Output the winning hyperparameters.
     best_params = model.best_estimator_.get_params()

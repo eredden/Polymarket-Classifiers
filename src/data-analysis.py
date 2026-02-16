@@ -7,11 +7,10 @@ import pandas
 from pathlib import Path
 import seaborn
 import shap
-from sklearn.metrics import r2_score
-from sklearn.metrics import root_mean_squared_error
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 import sys
-from xgboost import XGBRegressor
+from xgboost import XGBClassifier
 
 # This function validates that the CSV exists and can be read.
 def load_data(file: str) -> pandas.DataFrame:
@@ -68,54 +67,31 @@ if __name__ == "__main__":
         random_state=42 # A seed used for RNG, which ensures reproducibility.
     )
 
-    # Instantiate the XGBoost regressor. Note that the n_estimators and 
-    # max_depth values are not arbitrary, but are approximate global minima
-    # discovered via a random search of hyperparameter values.
-    model = XGBRegressor(
-        objective="reg:squarederror",
+    # Instantiate the XGBoost classifier and a hyperparameter search space.
+    # This is the search space that we will randomly search through to find the
+    # best hyperparameters for the XGBoost regressor.
+    model = XGBClassifier(
+        objective="binary:logistic",
+        eval_metric="auc", # ROC-AUC score used for determining model effectiveness.
         learning_rate=0.1, # The rate at which the gradient can be adjusted.
-        n_estimators=314, # The number of sequential trees to build.
-        max_depth=2 # The amount of layers in a given tree.
+        n_estimators=35, # The number of sequential trees to build.
+        max_depth=7 # The amount of layers in a given tree.
     )
 
     # Fit the regressor to the training data.
     model.fit(X_train, y_train)
 
-    # Make predictions on the test data.
-    y_pred = model.predict(X_test)
+    # Get the probability for the "1" class (e.g., over wins the bet).
+    y_probs = model.predict_proba(X_test)[:, 1]
+
+    # Calculate the AUC-ROC score. It is a good metric for determining 
+    # classification accuracy with a skewed dataset like ours where the ratio of 
+    # under to over bets is lopsided.
+    auc_score = roc_auc_score(y_test, y_probs)
 
     # Output the model evaluation metrics!
-    # R^2 is the variation of the dependent variable (e.g. over) 
-    # explained by the variation in the independent variables (i.e. features).
-    # RMSE is the average of the differences between the predicted and actual 
-    # values using the same units as the target variable.
-    mse = r2_score(y_test, y_pred)
-    rmse = root_mean_squared_error(y_test, y_pred)
-
     print("[MODEL EVALUATION METRICS]")
-    print(f"R^2: {mse}")
-    print(f"R^2 as a percentage: {mse * 100}%")
-    print(f"Root Mean Squared Error (RMSE): {rmse}")
-
-    # Generate a violin plot for line and the over. This code was ripped directly from: 
-    # https://www.geeksforgeeks.org/data-analysis/exploratory-data-analysis-in-python/
-    plt.figure(figsize=(16, 8))
-
-    # If this is not rounded to a multiple of ten, this graph gets cluttered quick.
-    data["line"] = ((data["line"] / 10).round(0) * 10).astype(int)
-
-    seaborn.violinplot(
-        x="line", 
-        y="over", 
-        data=data,
-        alpha=0.7
-    )
-
-    plt.title("Violin Plot for Line and Over")
-    plt.xlabel("line")
-    plt.ylabel("over")
-    plt.savefig("line-violin-plot.png", transparent=False)
-    plt.close()
+    print(f"AUC-ROC SCORE: {auc_score}")
 
     # This correlation heatmap code was ripped directly from: 
     # https://www.geeksforgeeks.org/data-analysis/exploratory-data-analysis-in-python/
@@ -150,11 +126,8 @@ if __name__ == "__main__":
 
     # Generate SHAP dependence graphs for these features.
     shap_dependence_features = [
-        "line",
-        "oneDayPriceChange",
-        "oneHourPriceChange",
-        "spread",
-        "volume"
+        "lastTradePrice",
+        "spread"
     ]
 
     for feature in shap_dependence_features:
