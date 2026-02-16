@@ -60,8 +60,7 @@ EXCLUDED_COLUMNS = [
     "holdingRewardsEnabled", 
     "icon", 
     "id", 
-    "image", 
-    "lastTradePrice", 
+    "image",
     "liquidity",
     "liquidityAmm",
     "liquidityClob",
@@ -79,7 +78,10 @@ EXCLUDED_COLUMNS = [
     "negRiskRequestID", 
     "new",
     "notificationsEnabled", 
+    "oneDayPriceChange",
+    "oneHourPriceChange",
     "oneMonthPriceChange",
+    "oneWeekPriceChange",
     "oneYearPriceChange",
     "orderMinSize",
     "pagerDutyNotificationEnabled", 
@@ -127,9 +129,7 @@ EXCLUDED_COLUMNS = [
 ]
 
 FLOAT_COLUMNS = [
-    "oneDayPriceChange",
-    "oneHourPriceChange",
-    "oneWeekPriceChange",
+    "lastTradePrice",
     "orderPriceMinTickSize",
     "volume",
     "volume1mo",
@@ -206,6 +206,9 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
     # Apply the filtering masks and drop any rows that still have null values.
     data = data.loc[mask_closed & mask_binary & mask_over_under].dropna()
 
+    # Remove settled markets to prevent extreme target leakage.
+    data = data[(data["lastTradePrice"] > 0.01) & (data["lastTradePrice"] < 0.99)]
+
     # Convert the outcomes and outcome prices strings into lists.
     data["outcomePrices"] = data["outcomePrices"].apply(ast.literal_eval)
     data["outcomes"] = data["outcomes"].apply(ast.literal_eval)
@@ -235,6 +238,15 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
         axis=1, 
         inplace=True
     )
+
+    # Create a relative volume feature for 24 hour volume v.s. all volume to
+    # show how much is changing RIGHT NOW!
+    # 1e-9 added to volume to make sure we never divide by zero.
+    data["relativeVolume"] = data["volume24hr"] / (data["volume"] + 1e-9)
+
+    # Liquidity index to see how much volume is distributed over the bet spread.
+    # Tighter spreads with more volume are generally better.
+    data["liquidityIndex"] = data["volume"] / (data["spread"] + 1e-9)
 
     return data
 
