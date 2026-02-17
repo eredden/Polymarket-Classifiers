@@ -31,9 +31,6 @@ The Polymarket line bias classification model can executed using the following c
 # Pre-process the raw polymarket_markets.csv dataset to get over/under bets into a separate dataset file.
 python data-preprocessing.py --data "..\..\data\polymarket_markets.csv" --output "..\..\data\binary_polymarket_markets.csv"
 
-# OPTIONAL: Get optimal hyperparameters for the XGBoost model.
-python hyperparameter-optimization.py --data "..\..\data\binary_polymarket_markets.csv"
-
 # Runs the model and shows you the AUC-ROC score, correlation heatmap, and SHAP dependence graphs.
 # Note that images will be placed in the directory where this script is executed. You may want to 
 # change your working directory to an images folder when running this.
@@ -41,6 +38,8 @@ python data-analysis.py --data "..\..\data\binary_polymarket_markets.csv"
 ```
 
 ## Findings
+
+### Over/Under Classification Model
 
 I originally intended for this project to be used for predicting the outcomes of over/under bets on Polymarket. This model is capable of accurately predicting whether a given bet will be over or under the line 81% of the time. However, this is because the model is working with a dataset that was generated after the events had already ended. Most explicit data leaks have been removed, but the general sentiment from betting participants is still priced into the `lastTradePrice`, `liquidityIndex`, `spread`, and the various volume features.
 
@@ -50,7 +49,11 @@ AUC-ROC SCORE: 0.8099730458221024
 AUC-ROC SCORE (AS A PERCENTAGE): 81%
 ```
 
-As a result, this model would likely be functionally useless when used against metrics from ongoing betting events through Polymarket. However, it may be useful for post-mortems of bets to see what features tend to correlate with particular betting options. To see if there is any statisically significant bias from gamblers based on the line of the bet, I created a new line bias classification model which exclusively uses the `line` feature, `daysElapsed` feature, and one-hot encoded sports categories to determine the AUC-ROC score when predicting the `over` target feature. 
+As a result, this model would likely be functionally useless when used against metrics from ongoing betting events through Polymarket. However, it may be useful for post-mortems of bets to see what features tend to correlate with particular betting options. 
+
+### Line Bias Classification Model
+
+To see if there is any statisically significant bias from gamblers based on the line of the bet, I created a new line bias classification model which exclusively uses the `line` feature, `daysElapsed` feature, and one-hot encoded sports categories to determine the AUC-ROC score when predicting the `over` target feature. 
 
 ```
 [MODEL EVALUATION METRICS]
@@ -77,3 +80,34 @@ Moreover, reviewing the SHAP dependency graphs show that these edges tend to be 
 ```
 
 The edges range from approximately -6% for bets on `sport_football_player_prop` category rows to +12% for the `sport_other` category rows! `sport_soccer` and `sport_football` both boast a significant edge of +9% as well! As a point of reference, the break-even point for standard sports betting with -110 odds is a 52.38% win rate due to sportsbooks charging "juice" or "vig" fees on bets. The `sport_football` accuracy (i.e. win rate) of 58.65% would be more than enough to generate a significant profit over time. While comparing the `sport_other` and `sport_soccer` edges is tempting, it should be kept in mind that both of these have sample sizes under 200 bets for our dataset and may not be a representative sample of their actual edges.
+
+The lack of predictive edge in lower-scoring sports like baseball and hockey suggests that these markets may be more efficiently priced relative to their lines, or that the scoring volatility in these sports is less susceptible to the specific line-based biases identified in football. The outright failure of predictions for the first half of basketball games and football player props may be attributed to these "games" having different rules than full duration sports matches, causing the model to be confused when interpreting information related to these categories of bets.
+
+### Removing Look-Ahead Bias
+
+However, the line bias model discovered above has a significant flaw: the `daysElapsed` feature is still a feature generated after the betting is finished. This means that we would still be reliant on *future* data to predict *present* events. I stripped out the `daysElapsed` feature to mitigate this issue and found that the model accuracy largely remained the same. Unfortunately, I also discovered that the XGBClassifier model was overly complex given our relatively low-feature dataset, causing the model to overfit to the dataset. 
+
+Switching to a logistic regression model resolved the overfitting, but it revealed that the line has zero predictive accuracy for most of the bets we are looking at. In fact, the model is now less effective than a coin flip for predicting the outcome of a given over/under bet.
+
+```
+[GLOBAL MODEL EVALUATION METRICS]
+AUC-ROC SCORE: 0.49271776090402414
+
+[MODEL EDGE BY SPORT]
+                        bucket  sample_size  accuracy      edge edge_percentage
+0               sport_baseball            3  0.500000  0.000000              0%
+1             sport_basketball          900  0.500000  0.000000              0%
+2  sport_basketball_first_half          167  0.500000  0.000000              0%
+3                sport_esports          154  0.500000  0.000000              0%
+4               sport_football          853  0.500000  0.000000              0%
+6                 sport_hockey           73  0.500000  0.000000              0%
+7                  sport_other          146  0.500000  0.000000              0%
+8                 sport_soccer          160  0.500000  0.000000              0%
+5   sport_football_player_prop           46  0.462963 -0.037037             -4%
+```
+
+### Conclusion
+
+This project is a null result which shows that my hypothesis about the size of the line causing a bias in gambler option selection is incorrect. Predicting the outcome of an over/under bet based on the line alone is statistically worse than a coin flip globally, and about the same locally for most categories aside from `sport_football_player_prop`.
+
+If I were to do all of this over again, I would choose to get a time series dataset where I can train the model based on information from unresolved bets, compare those results against those bets once they are resolved, and then walk the model through bets from a year later to see if the underlying structural patterns that it finds still hold up for predicting completely new bets. I would also try to implement some form of natural language processing to get more information about the teams and players.

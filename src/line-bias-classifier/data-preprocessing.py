@@ -143,11 +143,11 @@ EXCLUDED_COLUMNS = [
 
 CALC_COLUMNS = [
     "description",
-    "endDate",
+    # "endDate",
     "outcomes",
     "outcomePrices",
     "question",
-    "startDate",
+    # "startDate",
     "startDateIso",
     "umaEndDate",
     "umaResolutionStatus"
@@ -239,6 +239,7 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
     # This will be the target feature for our classification model.
     data["over"] = data.apply(determine_result, axis=1)
 
+    """
     # Convert dates to datetime objects and calculate a daysElapsed value.
     data["endDate"] = pandas.to_datetime(
         data["umaEndDate"], 
@@ -253,6 +254,7 @@ def preprocess_data(data: pandas.DataFrame) -> pandas.DataFrame:
     )
 
     data["days_elapsed"] = (data["endDate"] - data["startDate"]).dt.days
+    """
 
     # Create category labels for each of the different sports in the dataset.
     data['sport'] = data.apply(categorize_sport_refined, axis=1)

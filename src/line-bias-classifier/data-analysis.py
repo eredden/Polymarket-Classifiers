@@ -7,10 +7,10 @@ import pandas
 from pathlib import Path
 import seaborn
 import shap
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 import sys
-from xgboost import XGBClassifier
 
 # This function validates that the CSV exists and can be read.
 def load_data(file: str) -> pandas.DataFrame:
@@ -67,15 +67,11 @@ if __name__ == "__main__":
         random_state=42 # A seed used for RNG, which ensures reproducibility.
     )
 
-    # Instantiate the XGBoost classifier and a hyperparameter search space.
-    # This is the search space that we will randomly search through to find the
-    # best hyperparameters for the XGBoost classifier.
-    model = XGBClassifier(
-        objective="binary:logistic",
-        eval_metric="auc", # ROC-AUC score used for determining model effectiveness.
-        learning_rate=0.1, # The rate at which the gradient can be adjusted.
-        n_estimators=64, # The number of sequential trees to build.
-        max_depth=3 # The amount of layers in a given tree.
+    # Instantiate the LogisticRegression classifier.
+    model = LogisticRegression(
+        solver="lbfgs",
+        max_iter=1000,
+        random_state=42
     )
 
     # Fit the classifier to the training data.
