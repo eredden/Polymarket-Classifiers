@@ -26,7 +26,7 @@ python data-preprocessing.py --data "..\data\polymarket_markets.csv" --output ".
 # OPTIONAL: Get optimal hyperparameters for the XGBoost model.
 python hyperparameter-optimization.py --data "..\data\binary_polymarket_markets.csv"
 
-# Runs the model and shows you the AUC-ROC score, correlation heatmap, and SHAP dependence graphs.
+# Runs the model which shows you the AUC-ROC score, correlation heatmap, and SHAP dependence graphs.
 # Note that images will be placed in the directory where this script is executed. You may want to 
 # change your working directory to an images folder when running this.
 python data-analysis.py --data "..\data\binary_polymarket_markets.csv"
@@ -38,9 +38,7 @@ The Polymarket line bias classification model can executed using the following c
 # Pre-process the raw polymarket_markets.csv dataset to get over/under bets into a separate dataset file.
 python data-preprocessing.py --data "..\..\data\polymarket_markets.csv" --output "..\..\data\binary_polymarket_markets.csv"
 
-# Runs the model and shows you the AUC-ROC score, correlation heatmap, and SHAP dependence graphs.
-# Note that images will be placed in the directory where this script is executed. You may want to 
-# change your working directory to an images folder when running this.
+# Runs the model, which shows you the AUC-ROC score and sports category edges.
 python data-analysis.py --data "..\..\data\binary_polymarket_markets.csv"
 ```
 
