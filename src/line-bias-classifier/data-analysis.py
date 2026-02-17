@@ -89,9 +89,50 @@ if __name__ == "__main__":
     # under to over bets is lopsided.
     auc_score = roc_auc_score(y_test, y_probs)
 
-    # Output the model evaluation metrics!
-    print("[MODEL EVALUATION METRICS]")
+    # Output the global model evaluation metrics!
+    print("[GLOBAL MODEL EVALUATION METRICS]")
     print(f"AUC-ROC SCORE: {auc_score}")
+
+    # Combine test features, actual results, and predictions back into one 
+    # DataFrame for analysis.
+    analysis = X_test.copy()
+    analysis["actual"] = y_test
+    analysis["predicted"] = model.predict(X_test)
+    analysis["is_correct"] = (analysis["actual"] == analysis["predicted"]).astype(int)
+
+    # Create a bucket of rows for each sport category and evaluate the model"s 
+    # prediction accuracy for each.
+    sport_cols = [col for col in X.columns if col.startswith("sport_")]
+    sport_edge_results = []
+
+    for sport in sport_cols:
+        # Filter for rows where this sport category is True (1).
+        subset = analysis[analysis[sport] == 1]
+
+        if len(subset) > 0:
+            # The edge is simply the accuracy minus 0.50, effectively the
+            # advantage over predicting with random chance.
+            accuracy = roc_auc_score(
+                subset["actual"], 
+                subset["predicted"]
+            )
+            edge = accuracy - 0.50
+        
+            sport_edge_results.append({
+                "bucket": sport,
+                "sample_size": len(subset),
+                "accuracy": accuracy,
+                "edge": edge,
+                "edge_percentage": f"{edge:.0%}"
+            })
+
+    sport_df = pandas.DataFrame(sport_edge_results).sort_values(
+        by="edge", 
+        ascending=False
+    )
+
+    print("\n[MODEL EDGE BY SPORT]")
+    print(sport_df)
 
     # This correlation heatmap code was ripped directly from: 
     # https://www.geeksforgeeks.org/data-analysis/exploratory-data-analysis-in-python/
