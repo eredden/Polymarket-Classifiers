@@ -10,7 +10,7 @@ Make sure to install the required dependencies from the `requirements.txt` file 
 pip install -r requirements.txt
 ```
 
-The Polymarket bet option classification model can executed using the following commands in your local shell, with the `--data` argument requiring the path to the data CSV which contains the Polymarket data. *Note that this assumes your present working directory is the bet-option-classifier directory of this repository: if this is not the case, simply adjust the path supplied to the `--data` argument as needed.*
+The Polymarket bet option classification model can executed using the following commands in your local shell, with the `--data` argument requiring the path to the data CSV which contains the Polymarket data. *Note that this assumes your present working directory is the .\src\bet-option-classifier directory of this repository: if this is not the case, simply adjust the path supplied to the `--data` argument as needed.*
 
 ```bash
 # Pre-process the raw polymarket_markets.csv dataset to get over/under bets into a separate dataset file.
@@ -25,9 +25,20 @@ python hyperparameter-optimization.py --data "..\data\binary_polymarket_markets.
 python data-analysis.py --data "..\data\binary_polymarket_markets.csv"
 ```
 
-The Polymarket line bias model can be executed using the following commands . . . 
+The Polymarket line bias classification model can executed using the following commands in your local shell, with the `--data` argument requiring the path to the data CSV which contains the Polymarket data. *Note that this assumes your present working directory is the .\src\line-bias-classifier directory of this repository: if this is not the case, simply adjust the path supplied to the `--data` argument as needed.*
 
-**TODO:** Get this documented.
+```bash
+# Pre-process the raw polymarket_markets.csv dataset to get over/under bets into a separate dataset file.
+python data-preprocessing.py --data "..\..\data\polymarket_markets.csv" --output "..\..\data\binary_polymarket_markets.csv"
+
+# OPTIONAL: Get optimal hyperparameters for the XGBoost model.
+python hyperparameter-optimization.py --data "..\..\data\binary_polymarket_markets.csv"
+
+# Runs the model and shows you the AUC-ROC score, correlation heatmap, and SHAP dependence graphs.
+# Note that images will be placed in the directory where this script is executed. You may want to 
+# change your working directory to an images folder when running this.
+python data-analysis.py --data "..\..\data\binary_polymarket_markets.csv"
+```
 
 ## Findings
 
@@ -39,6 +50,14 @@ AUC-ROC SCORE: 0.8099730458221024
 AUC-ROC SCORE (AS A PERCENTAGE): 81%
 ```
 
-As a result, this model would likely be functionally useless when used against metrics from ongoing betting events through Polymarket. However, it may be useful for post-mortems of bets to see what features tend to correlate with particular betting options, e.g. seeing if there is a bias towards "over" bets for lines exceeding 240 . . .
+As a result, this model would likely be functionally useless when used against metrics from ongoing betting events through Polymarket. However, it may be useful for post-mortems of bets to see what features tend to correlate with particular betting options. To see if there is any statisically significant bias from gamblers based on the line of the bet, I created a new line bias classification model which exclusively uses the `line` feature, `daysElapsed` feature, and one-hot encoded sports categories to determine the AUC-ROC score when predicting the `over` target feature. 
+
+```
+[MODEL EVALUATION METRICS]
+AUC-ROC SCORE: 0.5624034872424196
+AUC-ROC SCORE (AS A PERCENTAGE): 56%
+```
+
+With an AUC-ROC score of 56% when reviewing over 10,000 binary options bets with over/under options, it is clear that there is a statistically significant bias caused exclusively by the line, duration, and category of the bet in question.
 
 **TODO:** Finish this section.
