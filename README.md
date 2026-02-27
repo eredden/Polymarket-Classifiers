@@ -11,13 +11,17 @@ My original hypothesis for this project was that the size of the line would caus
 This program was written by Evan Redden (ID: 012248650) for the Advanced AI and ML (D683) course offered by Western Governors University.
 
 ## Usage
+If you want to test the preprocessing scripts, then you will need to download the [dataset containing Polymarket betting event data](https://www.kaggle.com/datasets/ismetsemedov/polymarket-prediction-markets) here, then place the polymarket_markets.csv file into the `.\data` directory of this repository.
+
 Make sure to install the required dependencies from the `requirements.txt` file at the root of this repository! *Note that this command assumes your present working directory is the root of this repository.*
 
 ```bash
 pip install -r requirements.txt
 ```
 
-The Polymarket bet option classification model can executed using the following commands in your local shell, with the `--data` argument requiring the path to the data CSV which contains the Polymarket data. *Note that this assumes your present working directory is the .\src\bet-option-classifier directory of this repository: if this is not the case, simply adjust the path supplied to the `--data` argument as needed.*
+The Polymarket bet option classification model can executed using the following commands in your local shell, with the `--data` argument requiring the path to the data CSV which contains the Polymarket data. 
+
+*Note that this assumes your present working directory is the `.\src\bet-option-classifier` directory of this repository: if this is not the case, simply adjust the path supplied to the `--data` argument as needed.*
 
 ```bash
 # Pre-process the raw polymarket_markets.csv dataset to get over/under bets into a separate dataset file.
@@ -32,7 +36,9 @@ python hyperparameter-optimization.py --data "..\data\binary_polymarket_markets.
 python data-analysis.py --data "..\data\binary_polymarket_markets.csv"
 ```
 
-The Polymarket line bias classification model can executed using the following commands in your local shell, with the `--data` argument requiring the path to the data CSV which contains the Polymarket data. *Note that this assumes your present working directory is the .\src\line-bias-classifier directory of this repository: if this is not the case, simply adjust the path supplied to the `--data` argument as needed.*
+The Polymarket line bias classification model can executed using the following commands in your local shell, with the `--data` argument requiring the path to the data CSV which contains the Polymarket data. 
+
+*Note that this assumes your present working directory is the `.\src\line-bias-classifier` directory of this repository: if this is not the case, simply adjust the path supplied to the `--data` argument as needed.*
 
 ```bash
 # Pre-process the raw polymarket_markets.csv dataset to get over/under bets into a separate dataset file.
